@@ -1,0 +1,10 @@
+fastapi>=0.110
+uvicorn>=0.29
+sqlalchemy>=2.0
+python-multipart>=0.0.9
+pypdf>=4.0
+scikit-learn>=1.4
+numpy>=1.26
+httpx>=0.27
+pytest>=8.0
+# Optional: pip install psycopg2-binary   (only if DATABASE_URL points at PostgreSQL)

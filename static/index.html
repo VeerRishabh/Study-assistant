@@ -1,0 +1,22 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>Study Assistant</title>
+<style>body{font:15px system-ui;max-width:760px;margin:2rem auto;padding:0 1rem}input,button,select{font:inherit;padding:.4rem;margin:.2rem 0}
+pre{background:#f3f3f3;padding:.7rem;white-space:pre-wrap;border-radius:6px}section{border:1px solid #ddd;border-radius:8px;padding:1rem;margin:1rem 0}@media(prefers-color-scheme:dark){body{background:#111;color:#eee}pre{background:#222}section{border-color:#333}}</style>
+<h1>🧠 Study Assistant</h1>
+<section><b>Account</b><br><input id=u placeholder=username> <input id=p type=password placeholder="password (8+)">
+<button onclick="auth('login')">Log in</button><button onclick="auth('register')">Register</button> <span id=who></span></section>
+<section><b>Upload PDF / .txt</b><br><input type=file id=f><button onclick=up()>Upload</button><div id=docs></div></section>
+<section><b>Ask</b><br><input id=q size=50 placeholder="Ask about your notes"><button onclick=ask()>Ask</button><pre id=ans></pre></section>
+<section><b>Quiz</b><br><select id=qd></select><button onclick=quiz()>Generate 5 questions</button><div id=quizbox></div><pre id=res></pre></section>
+<script>
+let T=localStorage.t||"",Q=null;const H=()=>({Authorization:"Bearer "+T}),JH=()=>({...H(),"content-type":"application/json"});
+async function j(url,o={}){const r=await fetch(url,o);const d=await r.json();if(!r.ok)throw new Error(d.detail||r.status);return d}
+async function auth(k){try{const d=await j("/"+k,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({username:u.value,password:p.value})});T=localStorage.t=d.token;who.textContent="✔ signed in";docsLoad()}catch(e){who.textContent=e.message}}
+async function up(){const fd=new FormData();fd.append("file",f.files[0]);try{await j("/documents",{method:"POST",headers:H(),body:fd});docsLoad()}catch(e){alert(e.message)}}
+async function docsLoad(){const d=await j("/documents",{headers:H()}).catch(()=>[]);docs.innerHTML=d.map(x=>`<div>#${x.id} ${x.filename}</div>`).join("");qd.innerHTML=d.map(x=>`<option value=${x.id}>${x.filename}</option>`).join("")}
+async function ask(){try{const d=await j("/ask",{method:"POST",headers:JH(),body:JSON.stringify({question:q.value})});ans.textContent=d.answer+"\n\nSources:\n"+d.sources.map(s=>`- doc ${s.document_id} p.${s.page} (score ${s.score})`).join("\n")}catch(e){ans.textContent=e.message}}
+async function quiz(){try{Q=await j("/quizzes",{method:"POST",headers:JH(),body:JSON.stringify({document_id:+qd.value,count:5})});
+quizbox.innerHTML=Q.questions.map((x,i)=>`<p>${i+1}. ${x.question}<br>`+x.options.map((o,k)=>`<label><input type=radio name=a${i} value=${k}> ${o}</label><br>`).join("")+"</p>").join("")+"<button onclick=sub()>Submit</button>"}catch(e){res.textContent=e.message}}
+async function sub(){const a=Q.questions.map((_,i)=>+(document.querySelector(`input[name=a${i}]:checked`)||{value:-1}).value);const d=await j(`/quizzes/${Q.quiz_id}/submit`,{method:"POST",headers:JH(),body:JSON.stringify({answers:a})});res.textContent=`Score ${d.score}/${d.total}\n`+d.review.map((r,i)=>`Q${i+1}: correct option ${r.correct_index+1}`).join("\n")}
+if(T)docsLoad();
+</script>
